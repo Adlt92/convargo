@@ -144,14 +144,30 @@ const actors = [{
   }]
 }];
 
-function PrintConsole(element){
-  console.log(element);
+function PrintConsole(tab){
+  tab.forEach(function(element){
+      console.log(element);
+  });
 }
 
 function CommissionPrice(element){
-  element.commission.insurance = (element.price/2).toFixed(2);
-  element.commission.treasury = element.distance / 500;
-  element.commission.convargo = element.price - element.commission.insurance - element.commission.treasury;
+  var commission = (element.price * 30)/ 100;
+  var distance = element.distance;
+  var volume = element.volume;
+  var insurance = commission/2;
+  insurance = insurance.toFixed(2);
+  var treasury = element.distance / 500;
+  treasury = treasury.toFixed(2);
+  var convargo = commission - insurance - treasury;
+  if(element.options.deductibleReduction == true){
+    element.price += volume;
+    element.commission.convargo += volume;
+  }
+  convargo = convargo.toFixed(2);
+  //save
+  element.commission.insurance = insurance;
+  element.commission.treasury = treasury;
+  element.commission.convargo = convargo;
 }
 
 function DiscountEvaluation(volume){
@@ -168,8 +184,7 @@ function DiscountEvaluation(volume){
   return decrease;
 }
 
-function ShippingPrice()
-{
+function ShippingPrice(){
   var discount;
   var priceVolume;
   deliveries.forEach(function(deli) {
@@ -180,11 +195,37 @@ function ShippingPrice()
         deli.price  = (priceVolume - (priceVolume * discount)/100 ) + ( deli.distance * truck.pricePerKm);
       }
     });
-    PrintConsole(deli);
-    //step 3
     CommissionPrice(deli);
+  });
+}
 
+function Payment(){
+  deliveries.forEach(function(deli) {
+    actors.forEach(function(actor) {
+      if(deli.id == actor.deliveryId){
+        actor.payment.forEach(function(pay){
+          if(pay.who == "shipper"){
+            pay.amount = deli.price;
+          }
+          if(pay.who == "trucker"){
+            pay.amount = deli.price - ((deli.price * 30)/ 100);
+          }
+          if(pay.who == "insurance"){
+            pay.amount = deli.commission.insurance;
+          }
+          if(pay.who == "treasury"){
+            pay.amount = deli.commission.treasury;
+          }
+          if(pay.who == "convargo"){
+            pay.amount = deli.commission.convargo;
+          }
+        });
+      }
+    });
   });
 }
 
 ShippingPrice();
+Payment();
+PrintConsole(deliveries);
+PrintConsole(actors);
